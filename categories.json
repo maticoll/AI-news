@@ -1,0 +1,37 @@
+[
+  {
+    "id": "modelos",
+    "name": "Modelos de IA",
+    "description": "Lanzamientos, actualizaciones y benchmarks de modelos de lenguaje, visión o multimodales"
+  },
+  {
+    "id": "agentes",
+    "name": "Agentes",
+    "description": "Agentes autónomos, multi-agente, herramientas de automatización y workflows"
+  },
+  {
+    "id": "plugins",
+    "name": "Plugins y Extensiones",
+    "description": "Plugins, extensiones, integraciones con apps de terceros"
+  },
+  {
+    "id": "webdesign",
+    "name": "Web & Diseño",
+    "description": "Diseño web, UI/UX, generación de interfaces, herramientas de diseño con IA"
+  },
+  {
+    "id": "creatividad",
+    "name": "Ideas Creativas",
+    "description": "Generación de contenido creativo, arte, música, escritura, storytelling con IA"
+  },
+  {
+    "id": "investigacion",
+    "name": "Investigación",
+    "description": "Papers, avances científicos, seguridad en IA, alineamiento"
+  },
+  {
+    "id": "otros",
+    "name": "Otros",
+    "description": "Temas que no encajan en ninguna categoría anterior"
+  }
+]
