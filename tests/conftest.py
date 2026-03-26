@@ -13,10 +13,11 @@ import backend.models  # noqa: F401 — registers models with Base
 
 @pytest.fixture
 def db_session():
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine(os.environ["DATABASE_URL"], connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
     yield session
     session.close()
     Base.metadata.drop_all(engine)
+    engine.dispose()
