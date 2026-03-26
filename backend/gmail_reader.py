@@ -70,7 +70,7 @@ def parse_gmail_message(message: dict) -> dict:
     # Published date
     published_at = None
     try:
-        published_at = parsedate_to_datetime(date_str).astimezone(timezone.utc).replace(tzinfo=timezone.utc)
+        published_at = parsedate_to_datetime(date_str).astimezone(timezone.utc)
     except Exception:
         pass
 
@@ -95,7 +95,6 @@ def build_gmail_service():
     from google.auth.transport.requests import Request
     from googleapiclient.discovery import build
 
-    creds_path = os.getenv("GMAIL_CREDENTIALS_PATH", "./credentials.json")
     token_path = os.getenv("GMAIL_TOKEN_PATH", "./gmail_token.json")
 
     creds = None
