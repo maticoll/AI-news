@@ -154,3 +154,4 @@ def test_post_refresh_valid_token(client):
             headers={"X-Refresh-Token": "test-secret"},
         )
     assert response.status_code == 200
+    mock_pipeline.assert_awaited_once()
