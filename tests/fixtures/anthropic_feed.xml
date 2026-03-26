@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Anthropic</title>
+    <link>https://www.anthropic.com</link>
+    <item>
+      <title>Claude 3.5 Sonnet release</title>
+      <link>https://www.anthropic.com/news/claude-3-5-sonnet</link>
+      <pubDate>Thu, 20 Jun 2024 17:00:00 +0000</pubDate>
+      <description>&lt;p&gt;Today we are releasing Claude 3.5 Sonnet, our most intelligent model to date.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Another article</title>
+      <link>https://www.anthropic.com/news/another</link>
+      <pubDate>Wed, 19 Jun 2024 10:00:00 +0000</pubDate>
+      <description>&lt;p&gt;Short article description here.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
