@@ -22,7 +22,7 @@ def test_parse_rss_article_fields():
     assert first["source"] == "Anthropic"
     assert first["source_type"] == "web"
     assert first["published_at"] is not None
-    assert "Sonnet" in first["excerpt"] or first["excerpt"] == ""
+    assert first["excerpt"] == "Today we are releasing Claude 3.5 Sonnet, our most intelligent model to date."
 
 
 def test_parse_rss_missing_pubdate():
@@ -31,4 +31,4 @@ def test_parse_rss_missing_pubdate():
     </channel></rss>"""
     articles = parse_rss_feed(xml)
     assert len(articles) == 1
-    assert articles[0]["published_at"] is None  # will fall back to scraped_at
+    assert articles[0]["published_at"] is None

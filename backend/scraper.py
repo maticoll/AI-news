@@ -36,9 +36,13 @@ def parse_rss_feed(xml_content: str) -> list[dict]:
 
 
 async def scrape_anthropic() -> list[dict]:
-    """Fetch Anthropic RSS and return parsed article dicts."""
+    """Fetch Anthropic RSS and return parsed article dicts. Returns [] on failure."""
     url = "https://www.anthropic.com/rss.xml"
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.get(url)
-        response.raise_for_status()
-    return parse_rss_feed(response.text)
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+        return parse_rss_feed(response.text)
+    except Exception as e:
+        logger.error(f"Anthropic RSS fetch failed: {e}")
+        return []
