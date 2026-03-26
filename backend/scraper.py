@@ -60,10 +60,10 @@ async def fetch_page_html(url: str) -> str:
     """Fetch JS-rendered page HTML using headless Chromium."""
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        await page.goto(url, wait_until="networkidle", timeout=30000)
-        html = await page.content()
-        await browser.close()
+        async with browser:
+            page = await browser.new_page()
+            await page.goto(url, wait_until="networkidle", timeout=30000)
+            html = await page.content()
     return html
 
 
