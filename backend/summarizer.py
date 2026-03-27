@@ -50,6 +50,12 @@ def call_claude(
     )
 
     raw = message.content[0].text.strip()
+    # Strip markdown code fences if present (e.g. ```json...```)
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
     data = json.loads(raw)
 
     summary = data.get("summary", "")

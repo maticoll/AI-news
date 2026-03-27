@@ -33,26 +33,40 @@ function relativeTime(isoString) {
   return `hace ${Math.floor(diff / 86400)}d`;
 }
 
+// ── HTML escaping ─────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ── Card rendering ────────────────────────────────────────────────────────────
 function renderCard(article) {
   const isEmail = article.source_type === 'email';
   const sourceBadgeClass = isEmail ? 'badge-email' : 'badge-source';
   const summaryText = article.ai_summary || 'Procesando...';
   const summaryClass = article.ai_summary ? '' : 'pending';
+  // Only allow http/https URLs — block javascript: and other schemes
+  const rawUrl = String(article.url || '');
+  const url = /^https?:\/\//i.test(rawUrl) ? escapeHtml(rawUrl) : '#';
 
   return `
     <div class="card">
       <div class="card-header">
-        <span class="badge ${sourceBadgeClass}">${article.source}</span>
+        <span class="badge ${sourceBadgeClass}">${escapeHtml(article.source)}</span>
         <span class="card-time">${relativeTime(article.published_at)}</span>
       </div>
-      <div class="card-title">${article.title}</div>
+      <div class="card-title">${escapeHtml(article.title)}</div>
       <div class="card-summary ${summaryClass}">
-        ${article.ai_summary ? '✨ ' : '⏳ '}${summaryText}
+        ${article.ai_summary ? '✨ ' : '⏳ '}${escapeHtml(summaryText)}
       </div>
       <div class="card-footer">
-        <span class="badge badge-category">${article.category_id || '—'}</span>
-        <a class="read-link" href="${article.url}" target="_blank" rel="noopener">Leer más →</a>
+        <span class="badge badge-category">${escapeHtml(article.category_id || '—')}</span>
+        <a class="read-link" href="${url}" target="_blank" rel="noopener noreferrer">Leer más →</a>
       </div>
     </div>
   `;

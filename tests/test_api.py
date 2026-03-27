@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from backend.database import Base, get_db
+from backend.database import Base
 from backend.models import Article
 import backend.models  # noqa
 
@@ -34,12 +34,12 @@ def db_session():
 
 @pytest.fixture
 def client(db_session):
-    from backend.main import app
+    from backend.main import app, get_db_from_state
 
     def override_get_db():
         yield db_session
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db_from_state] = override_get_db
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

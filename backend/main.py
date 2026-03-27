@@ -41,6 +41,7 @@ async def lifespan(app: FastAPI):
     engine = get_engine()
     init_db(engine)
     session_factory = get_session_factory(engine)
+    app.state.session_factory = session_factory
 
     scheduler = setup_scheduler(run_pipeline, session_factory)
     scheduler.start()
@@ -50,6 +51,14 @@ async def lifespan(app: FastAPI):
 
     scheduler.shutdown()
     logger.info("Scheduler stopped")
+
+
+def get_db_from_state(request: Request):
+    db = request.app.state.session_factory()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 app = FastAPI(title="AI News Hub", lifespan=lifespan)
@@ -68,7 +77,7 @@ def get_articles(
     q: str | None = None,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_from_state),
 ):
     query = db.query(Article).order_by(Article.published_at.desc())
     if source:
@@ -111,7 +120,7 @@ def get_categories(request: Request):
 async def refresh(
     request: Request,
     x_refresh_token: str | None = Header(default=None),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_from_state),
 ):
     if not REFRESH_TOKEN or x_refresh_token != REFRESH_TOKEN:
         raise HTTPException(status_code=401, detail="Invalid or missing refresh token")
