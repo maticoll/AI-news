@@ -1,1 +1,63 @@
-<html></html>
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI News Hub</title>
+  <link rel="stylesheet" href="/static/themes.css" />
+</head>
+<body>
+  <!-- Nav -->
+  <nav>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      <span class="logo-text">AI NEWS HUB</span>
+    </div>
+    <div class="theme-switcher">
+      <span class="theme-label">Tema:</span>
+      <button class="theme-btn active" data-theme="light" title="Clean Light" onclick="setTheme('light')"></button>
+      <button class="theme-btn" data-theme="dark" title="Dark Tech" onclick="setTheme('dark')"></button>
+      <button class="theme-btn" data-theme="gradient" title="Gradient Modern" onclick="setTheme('gradient')"></button>
+    </div>
+  </nav>
+
+  <!-- Hero + search -->
+  <div class="hero">
+    <h1>Noticias de IA al instante</h1>
+    <p>Actualizadas cada 2 horas · Resúmenes con Claude AI</p>
+    <div class="search-wrap">
+      <span>🔍</span>
+      <input id="search-input" type="text" placeholder="Buscar noticias, modelos, features..." autocomplete="off" />
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-section">
+    <div class="filter-row">
+      <span class="filter-row-label">Fuente</span>
+      <div id="source-filters"></div>
+    </div>
+    <div class="filter-row">
+      <span class="filter-row-label">Tema</span>
+      <div id="category-filters"></div>
+    </div>
+  </div>
+
+  <!-- Cards -->
+  <main class="main">
+    <div id="error-msg" class="error-msg" style="display:none"></div>
+    <div id="cards-grid" class="cards-grid"></div>
+    <div class="load-more-wrap">
+      <button id="load-more-btn" class="load-more-btn" onclick="loadMore()" style="display:none">
+        Cargar más
+      </button>
+    </div>
+  </main>
+
+  <footer>
+    <span id="footer-info">Cargando...</span> · Powered by Claude AI
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

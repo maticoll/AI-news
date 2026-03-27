@@ -1,0 +1,175 @@
+// ── State ─────────────────────────────────────────────────────────────────────
+const state = {
+  source: null,
+  category: null,
+  q: '',
+  offset: 0,
+  limit: 20,
+  loading: false,
+  totalLoaded: 0,
+};
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('ai-news-theme', theme);
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === theme);
+  });
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('ai-news-theme') || 'light';
+  setTheme(saved);
+}
+
+// ── Relative time ─────────────────────────────────────────────────────────────
+function relativeTime(isoString) {
+  if (!isoString) return '';
+  const diff = (Date.now() - new Date(isoString).getTime()) / 1000;
+  if (diff < 60) return 'hace un momento';
+  if (diff < 3600) return `hace ${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `hace ${Math.floor(diff / 3600)}h`;
+  return `hace ${Math.floor(diff / 86400)}d`;
+}
+
+// ── Card rendering ────────────────────────────────────────────────────────────
+function renderCard(article) {
+  const isEmail = article.source_type === 'email';
+  const sourceBadgeClass = isEmail ? 'badge-email' : 'badge-source';
+  const summaryText = article.ai_summary || 'Procesando...';
+  const summaryClass = article.ai_summary ? '' : 'pending';
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <span class="badge ${sourceBadgeClass}">${article.source}</span>
+        <span class="card-time">${relativeTime(article.published_at)}</span>
+      </div>
+      <div class="card-title">${article.title}</div>
+      <div class="card-summary ${summaryClass}">
+        ${article.ai_summary ? '✨ ' : '⏳ '}${summaryText}
+      </div>
+      <div class="card-footer">
+        <span class="badge badge-category">${article.category_id || '—'}</span>
+        <a class="read-link" href="${article.url}" target="_blank" rel="noopener">Leer más →</a>
+      </div>
+    </div>
+  `;
+}
+
+// ── Fetch articles ────────────────────────────────────────────────────────────
+async function fetchArticles(append = false) {
+  if (state.loading) return;
+  state.loading = true;
+
+  const params = new URLSearchParams({
+    limit: state.limit,
+    offset: state.offset,
+  });
+  if (state.source) params.set('source', state.source);
+  if (state.category) params.set('category', state.category);
+  if (state.q) params.set('q', state.q);
+
+  try {
+    const res = await fetch(`/api/articles?${params}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const articles = await res.json();
+
+    const grid = document.getElementById('cards-grid');
+    const errorEl = document.getElementById('error-msg');
+    errorEl.style.display = 'none';
+
+    if (!append) grid.innerHTML = '';
+
+    if (articles.length === 0 && !append) {
+      grid.innerHTML = '<div class="empty-state">No se encontraron artículos.</div>';
+    } else {
+      grid.insertAdjacentHTML('beforeend', articles.map(renderCard).join(''));
+      state.totalLoaded = append ? state.totalLoaded + articles.length : articles.length;
+      state.offset += articles.length;
+    }
+
+    const btn = document.getElementById('load-more-btn');
+    btn.style.display = articles.length === state.limit ? 'inline-block' : 'none';
+
+    updateFooter();
+  } catch (e) {
+    const errorEl = document.getElementById('error-msg');
+    errorEl.textContent = 'No se pudo cargar el contenido. Intentá de nuevo más tarde.';
+    errorEl.style.display = 'block';
+  } finally {
+    state.loading = false;
+  }
+}
+
+function loadMore() {
+  fetchArticles(true);
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+function resetPagination() {
+  state.offset = 0;
+  state.totalLoaded = 0;
+}
+
+function buildChips(containerId, items, activeKey, onSelect) {
+  const container = document.getElementById(containerId);
+  const allChip = `<span class="chip active" data-val="">Todas</span>`;
+  const chips = items.map(item => {
+    const val = typeof item === 'string' ? item : item.id;
+    const label = typeof item === 'string' ? item : item.name;
+    return `<span class="chip" data-val="${val}">${label}</span>`;
+  });
+  container.innerHTML = [allChip, ...chips].join('');
+
+  container.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      container.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      onSelect(chip.dataset.val || null);
+      resetPagination();
+      fetchArticles();
+    });
+  });
+}
+
+async function initFilters() {
+  const [sourcesRes, catsRes] = await Promise.all([
+    fetch('/api/sources'),
+    fetch('/api/categories'),
+  ]);
+  const sources = await sourcesRes.json();
+  const categories = await catsRes.json();
+
+  buildChips('source-filters', sources, 'source', val => { state.source = val; });
+  buildChips('category-filters', categories, 'category', val => { state.category = val; });
+}
+
+// ── Search ────────────────────────────────────────────────────────────────────
+let searchTimeout;
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('search-input').addEventListener('input', e => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      state.q = e.target.value.trim();
+      resetPagination();
+      fetchArticles();
+    }, 300);
+  });
+});
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+function updateFooter() {
+  document.getElementById('footer-info').textContent =
+    `${state.totalLoaded} artículos cargados`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  initTheme();
+  await initFilters();
+  await fetchArticles();
+}
+
+init();
