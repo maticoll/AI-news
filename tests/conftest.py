@@ -1,6 +1,6 @@
 import os
 os.environ.setdefault("REFRESH_SECRET_TOKEN", "test-secret")
-os.environ.setdefault("ANTHROPIC_API_KEY", "test-key")
+os.environ.setdefault("OPENAI_API_KEY", "test-key")
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("CATEGORIES_PATH", "./categories.json")
 

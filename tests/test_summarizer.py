@@ -21,16 +21,19 @@ def test_load_categories(tmp_path):
     assert result[0]["id"] == "modelos"
 
 
+def _make_openai_response(text: str) -> MagicMock:
+    """Build a mock OpenAI chat completion response."""
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = text
+    return mock_response
+
+
 def test_call_claude_returns_summary_and_category():
     mock_client = MagicMock()
-    mock_message = MagicMock()
-    mock_message.content = [
-        MagicMock(text=json.dumps({
-            "summary": "Claude lanzó un nuevo modelo más rápido.",
-            "category_id": "modelos"
-        }))
-    ]
-    mock_client.messages.create.return_value = mock_message
+    mock_client.chat.completions.create.return_value = _make_openai_response(
+        json.dumps({"summary": "Claude lanzó un nuevo modelo más rápido.", "category_id": "modelos"})
+    )
 
     summary, category_id = call_claude(
         client=mock_client,
@@ -44,14 +47,9 @@ def test_call_claude_returns_summary_and_category():
 
 def test_call_claude_invalid_category_falls_back_to_otros():
     mock_client = MagicMock()
-    mock_message = MagicMock()
-    mock_message.content = [
-        MagicMock(text=json.dumps({
-            "summary": "Un resumen cualquiera.",
-            "category_id": "categoria_inexistente"
-        }))
-    ]
-    mock_client.messages.create.return_value = mock_message
+    mock_client.chat.completions.create.return_value = _make_openai_response(
+        json.dumps({"summary": "Un resumen cualquiera.", "category_id": "categoria_inexistente"})
+    )
 
     _, category_id = call_claude(
         client=mock_client,
@@ -72,7 +70,7 @@ def test_summarize_pending_increments_retry_on_failure(db_session):
     db_session.commit()
 
     mock_client = MagicMock()
-    mock_client.messages.create.side_effect = Exception("API error")
+    mock_client.chat.completions.create.side_effect = Exception("API error")
 
     summarize_pending(db=db_session, client=mock_client, categories=SAMPLE_CATEGORIES)
 
@@ -91,11 +89,9 @@ def test_summarize_pending_marks_processed_on_success(db_session):
     db_session.commit()
 
     mock_client = MagicMock()
-    mock_message = MagicMock()
-    mock_message.content = [
-        MagicMock(text=json.dumps({"summary": "Un resumen.", "category_id": "modelos"}))
-    ]
-    mock_client.messages.create.return_value = mock_message
+    mock_client.chat.completions.create.return_value = _make_openai_response(
+        json.dumps({"summary": "Un resumen.", "category_id": "modelos"})
+    )
 
     summarize_pending(db=db_session, client=mock_client, categories=SAMPLE_CATEGORIES)
 

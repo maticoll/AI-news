@@ -66,7 +66,7 @@ function renderCard(article) {
       </div>
       <div class="card-footer">
         <span class="badge badge-category">${escapeHtml(article.category_id || '—')}</span>
-        <a class="read-link" href="${url}" target="_blank" rel="noopener noreferrer">Leer más →</a>
+        ${url !== '#' ? `<a class="read-link" href="${url}" target="_blank" rel="noopener noreferrer">Leer más →</a>` : ''}
       </div>
     </div>
   `;

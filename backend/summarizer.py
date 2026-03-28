@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-from anthropic import Anthropic
+from openai import OpenAI
 from sqlalchemy.orm import Session
 
 from backend.models import Article
@@ -20,13 +20,13 @@ def load_categories(path: str = CATEGORIES_PATH) -> list[dict]:
 
 
 def call_claude(
-    client: Anthropic,
+    client: OpenAI,
     title: str,
     excerpt: str,
     categories: list[dict],
 ) -> tuple[str, str]:
     """
-    Single Claude Haiku call → (summary_es, category_id).
+    Single OpenAI call → (summary_es, category_id).
     Falls back to 'otros' if returned category_id is not in categories list.
     Raises on API error.
     """
@@ -43,13 +43,13 @@ def call_claude(
         f'"category_id": "<id de la categoría más apropiada>"}}'
     )
 
-    message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
     )
 
-    raw = message.content[0].text.strip()
+    raw = response.choices[0].message.content.strip()
     # Strip markdown code fences if present (e.g. ```json...```)
     if raw.startswith("```"):
         raw = raw.split("```")[1]
@@ -68,12 +68,12 @@ def call_claude(
 
 def summarize_pending(
     db: Session,
-    client: Anthropic | None = None,
+    client: OpenAI | None = None,
     categories: list[dict] | None = None,
 ) -> None:
     """Process all unprocessed articles (retry_count < MAX_RETRIES)."""
     if client is None:
-        client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     if categories is None:
         categories = load_categories()
 

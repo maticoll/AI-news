@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import json
 import logging
 import os
 import sys
@@ -41,6 +42,41 @@ def _extract_html_part(payload: dict) -> str:
     return ""
 
 
+def _extract_plain_part(payload: dict) -> str:
+    """Recursively find text/plain part in message payload."""
+    if payload.get("mimeType") == "text/plain":
+        return _decode_body(payload)
+    for part in payload.get("parts", []):
+        result = _extract_plain_part(part)
+        if result:
+            return result
+    return ""
+
+
+def _extract_excerpt(payload: dict) -> str:
+    """Extract meaningful text content from email payload."""
+    # Try HTML first — strip boilerplate tags before extracting text
+    html_body = _extract_html_part(payload)
+    if html_body:
+        soup = BeautifulSoup(html_body, "html.parser")
+        # Remove navigation, footer, header, and style/script noise
+        for tag in soup.find_all(["nav", "footer", "header", "style", "script",
+                                   "img", "a"]):
+            tag.decompose()
+        text = " ".join(soup.get_text(separator=" ", strip=True).split())
+        if len(text) > 80:
+            return text[:500]
+
+    # Fallback: plain text part
+    plain = _extract_plain_part(payload)
+    if plain:
+        text = " ".join(plain.split())
+        return text[:500]
+
+    # Last resort: Gmail snippet
+    return ""
+
+
 def parse_gmail_message(message: dict) -> dict:
     """Parse a Gmail API message payload → article dict. Pure function."""
     payload = message["payload"]
@@ -74,10 +110,8 @@ def parse_gmail_message(message: dict) -> dict:
     except Exception:
         pass
 
-    # Excerpt
-    html_body = _extract_html_part(payload)
-    soup = BeautifulSoup(html_body, "html.parser")
-    excerpt = soup.get_text(separator=" ", strip=True)[:500]
+    # Excerpt — use snippet as final fallback if body extraction yields nothing
+    excerpt = _extract_excerpt(payload) or message.get("snippet", "")[:500]
 
     return {
         "title": subject,
@@ -90,25 +124,37 @@ def parse_gmail_message(message: dict) -> dict:
 
 
 def build_gmail_service():
-    """Build authenticated Gmail API service using cached token."""
+    """Build authenticated Gmail API service using cached token.
+
+    Token resolution order:
+    1. GMAIL_TOKEN_JSON env var (full JSON string) — used in production/cloud
+    2. File at GMAIL_TOKEN_PATH — used in local development
+    """
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
     from googleapiclient.discovery import build
 
+    token_json = os.getenv("GMAIL_TOKEN_JSON", "")
     token_path = os.getenv("GMAIL_TOKEN_PATH", "./gmail_token.json")
 
     creds = None
-    if os.path.exists(token_path):
+    if token_json:
+        creds = Credentials.from_authorized_user_info(
+            json.loads(token_json), SCOPES
+        )
+    elif os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
-            with open(token_path, "w") as f:
-                f.write(creds.to_json())
+            # Persist refreshed token back to file only in local mode
+            if not token_json and os.path.exists(token_path):
+                with open(token_path, "w") as f:
+                    f.write(creds.to_json())
         else:
             raise RuntimeError(
-                f"Gmail token not found or invalid. Run: python -m backend.gmail_reader --auth"
+                "Gmail token not found or invalid. Run: python -m backend.gmail_reader --auth"
             )
 
     return build("gmail", "v1", credentials=creds)

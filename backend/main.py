@@ -95,7 +95,7 @@ def get_articles(
             "source": a.source,
             "source_type": a.source_type,
             "published_at": a.published_at.isoformat() if a.published_at else None,
-            "ai_summary": a.ai_summary,
+            "ai_summary": a.ai_summary or (a.excerpt if a.source_type == "email" else None),
             "category_id": a.category_id,
             "is_processed": a.is_processed,
         }
