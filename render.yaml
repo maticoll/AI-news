@@ -2,7 +2,7 @@ services:
   - type: web
     name: ai-news-hub
     runtime: python
-    buildCommand: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && playwright install-deps chromium && playwright install chromium
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:

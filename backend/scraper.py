@@ -1,5 +1,4 @@
 import logging
-import shutil
 from datetime import datetime, timezone
 from urllib.parse import urljoin
 
@@ -57,19 +56,10 @@ async def scrape_anthropic() -> list[dict]:
 
 # ── Playwright helpers ─────────────────────────────────────────────────────────
 
-def _chromium_executable() -> str | None:
-    """Return system Chromium path if available (used when playwright bundled binary is skipped)."""
-    return shutil.which("chromium") or shutil.which("chromium-browser")
-
-
 async def fetch_page_html(url: str) -> str:
     """Fetch JS-rendered page HTML using headless Chromium."""
-    launch_kwargs = {"headless": True}
-    exe = _chromium_executable()
-    if exe:
-        launch_kwargs["executable_path"] = exe
     async with async_playwright() as p:
-        browser = await p.chromium.launch(**launch_kwargs)
+        browser = await p.chromium.launch(headless=True)
         async with browser:
             page = await browser.new_page()
             await page.goto(url, wait_until="networkidle", timeout=30000)
