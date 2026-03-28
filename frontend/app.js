@@ -98,10 +98,21 @@ async function fetchArticles(append = false) {
 
     if (articles.length === 0 && !append) {
       grid.innerHTML = '<div class="empty-state">No se encontraron artículos.</div>';
+      stopPolling();
     } else {
       grid.insertAdjacentHTML('beforeend', articles.map(renderCard).join(''));
       state.totalLoaded = append ? state.totalLoaded + articles.length : articles.length;
       state.offset += articles.length;
+
+      // Start polling if there are pending articles
+      if (!append) {
+        const pending = countPending(articles);
+        if (pending > 0) {
+          startPolling(pending);
+        } else {
+          stopPolling();
+        }
+      }
     }
 
     const btn = document.getElementById('load-more-btn');
@@ -177,6 +188,84 @@ document.addEventListener('DOMContentLoaded', () => {
 function updateFooter() {
   document.getElementById('footer-info').textContent =
     `${state.totalLoaded} artículos cargados`;
+}
+
+// ── Toast notification ─────────────────────────────────────────────────────
+function showToast(message) {
+  let toast = document.getElementById('summary-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'summary-toast';
+    toast.className = 'toast';
+    toast.innerHTML = `
+      <span class="toast-icon">✨</span>
+      <span id="toast-msg"></span>
+      <button class="toast-close" onclick="dismissToast()" aria-label="Cerrar">×</button>
+    `;
+    document.body.appendChild(toast);
+  }
+  document.getElementById('toast-msg').textContent = message;
+  toast.classList.add('toast-visible');
+  // Auto-dismiss after 6 seconds
+  clearTimeout(toast._dismissTimer);
+  toast._dismissTimer = setTimeout(dismissToast, 6000);
+}
+
+function dismissToast() {
+  const toast = document.getElementById('summary-toast');
+  if (toast) toast.classList.remove('toast-visible');
+}
+
+// ── Polling for completed summaries ───────────────────────────────────────
+let _pollInterval = null;
+let _pendingCount = 0;
+
+function countPending(articles) {
+  return articles.filter(a => !a.is_processed).length;
+}
+
+async function checkSummaries() {
+  try {
+    const params = new URLSearchParams({ limit: state.limit, offset: 0 });
+    if (state.source) params.set('source', state.source);
+    if (state.category) params.set('category', state.category);
+    if (state.q) params.set('q', state.q);
+
+    const res = await fetch(`/api/articles?${params}`);
+    if (!res.ok) return;
+    const articles = await res.json();
+
+    const nowPending = countPending(articles);
+
+    if (nowPending < _pendingCount) {
+      const processed = _pendingCount - nowPending;
+      _pendingCount = nowPending;
+
+      // Refresh the grid silently and notify
+      resetPagination();
+      await fetchArticles();
+      showToast(`${processed} resumen${processed > 1 ? 'es listos' : ' listo'} — recargado`);
+
+      if (_pendingCount === 0) stopPolling();
+    } else {
+      _pendingCount = nowPending;
+    }
+  } catch {
+    // Silent — polling failures don't disrupt UX
+  }
+}
+
+function startPolling(initialPendingCount) {
+  _pendingCount = initialPendingCount;
+  if (_pollInterval) return;
+  _pollInterval = setInterval(checkSummaries, 30000); // every 30s
+}
+
+function stopPolling() {
+  if (_pollInterval) {
+    clearInterval(_pollInterval);
+    _pollInterval = null;
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
