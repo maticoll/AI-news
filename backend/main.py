@@ -68,6 +68,11 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── API routes ─────────────────────────────────────────────────────────────────
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.get("/api/articles")
 @limiter.limit("60/minute")
 def get_articles(
