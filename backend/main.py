@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, Depends, Header, HTTPException, Query, Request
+from fastapi import BackgroundTasks, FastAPI, Depends, Header, HTTPException, Query, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -228,13 +228,14 @@ def get_categories(request: Request):
 @limiter.limit("5/minute")
 async def refresh(
     request: Request,
+    background_tasks: BackgroundTasks,
     x_refresh_token: str | None = Header(default=None),
     db: Session = Depends(get_db_from_state),
 ):
     if not REFRESH_TOKEN or x_refresh_token != REFRESH_TOKEN:
         raise HTTPException(status_code=401, detail="Invalid or missing refresh token")
-    await run_pipeline(db)
-    return {"status": "ok"}
+    background_tasks.add_task(run_pipeline, db)
+    return {"status": "pipeline started"}
 
 
 # ── Static frontend ────────────────────────────────────────────────────────────
