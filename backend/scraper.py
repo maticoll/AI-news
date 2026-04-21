@@ -18,12 +18,11 @@ logger = logging.getLogger(__name__)
 
 # All RSS feeds: (url, source_name)
 RSS_FEEDS = [
-    ("https://www.anthropic.com/rss.xml",                                                                     "Anthropic"),
     ("https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_claude.xml",                      "Anthropic"),
     ("https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_changelog_claude_code.xml", "Anthropic"),
     ("https://openai.com/news/rss.xml",                                                                       "OpenAI"),
     ("https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_openai_research.xml",             "OpenAI"),
-    ("https://deepmind.google/blog/rss",                                                                      "Google DeepMind"),
+    ("https://deepmind.google/discover/blog/rss/",                                                            "Google DeepMind"),
     ("https://research.google/blog/rss",                                                                      "Google Research"),
     ("https://techcrunch.com/tag/artificial-intelligence/feed/",                                              "TechCrunch"),
     ("https://venturebeat.com/category/ai/feed/",                                                             "VentureBeat"),
