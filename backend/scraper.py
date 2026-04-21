@@ -16,7 +16,25 @@ logger = logging.getLogger(__name__)
 
 # ── RSS ────────────────────────────────────────────────────────────────────────
 
-def parse_rss_feed(xml_content: str) -> list[dict]:
+# All RSS feeds: (url, source_name)
+RSS_FEEDS = [
+    ("https://www.anthropic.com/news.rss",                                                                    "Anthropic"),
+    ("https://www.anthropic.com/rss.xml",                                                                     "Anthropic"),
+    ("https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_claude.xml",                      "Anthropic"),
+    ("https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_changelog_claude_code.xml", "Anthropic"),
+    ("https://openai.com/news/rss.xml",                                                                       "OpenAI"),
+    ("https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_openai_research.xml",             "OpenAI"),
+    ("https://deepmind.google/blog/rss",                                                                      "Google DeepMind"),
+    ("https://research.google/blog/rss",                                                                      "Google Research"),
+    ("https://techcrunch.com/tag/artificial-intelligence/feed/",                                              "TechCrunch"),
+    ("https://venturebeat.com/category/ai/feed/",                                                             "VentureBeat"),
+    ("https://www.technologyreview.com/feed/",                                                                "MIT Technology Review"),
+    ("https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_the_batch.xml",                   "The Batch"),
+    ("https://rss.arxiv.org/rss/cs.AI",                                                                       "arXiv"),
+]
+
+
+def parse_rss_feed(xml_content: str, source: str = "Anthropic") -> list[dict]:
     """Parse RSS XML string → list of article dicts. Pure function (no I/O)."""
     feed = feedparser.parse(xml_content)
     articles = []
@@ -33,7 +51,7 @@ def parse_rss_feed(xml_content: str) -> list[dict]:
         articles.append({
             "title": entry.get("title", ""),
             "url": entry.get("link", ""),
-            "source": "Anthropic",
+            "source": source,
             "source_type": "web",
             "published_at": published_at,
             "excerpt": excerpt,
@@ -41,17 +59,22 @@ def parse_rss_feed(xml_content: str) -> list[dict]:
     return articles
 
 
-async def scrape_anthropic() -> list[dict]:
-    """Fetch Anthropic RSS and return parsed article dicts. Returns [] on failure."""
-    url = "https://www.anthropic.com/rss.xml"
+async def scrape_rss(url: str, source: str) -> list[dict]:
+    """Fetch any RSS feed and return parsed article dicts. Returns [] on failure."""
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             response = await client.get(url)
             response.raise_for_status()
-        return parse_rss_feed(response.text)
+        return parse_rss_feed(response.text, source=source)
     except Exception as e:
-        logger.error(f"Anthropic RSS fetch failed: {e}")
+        logger.error(f"{source} RSS fetch failed ({url}): {e}")
         return []
+
+
+async def scrape_anthropic() -> list[dict]:
+    """Fetch Anthropic RSS and return parsed article dicts. Returns [] on failure.
+    Kept for backward compatibility — scrape_all() now uses RSS_FEEDS instead."""
+    return await scrape_rss("https://www.anthropic.com/rss.xml", "Anthropic")
 
 
 # ── Playwright helpers ─────────────────────────────────────────────────────────
@@ -266,18 +289,18 @@ def save_articles(articles: list[dict], db: Session) -> int:
 
 async def scrape_all(db: Session) -> None:
     """Run all web scrapers and save to DB. Continues on per-source failures."""
-    # Anthropic RSS
-    try:
-        articles = await scrape_anthropic()
-        count = save_articles(articles, db)
-        logger.info(f"Anthropic: {count} new articles")
-    except Exception as e:
-        logger.error(f"Anthropic scraper failed: {e}")
+    # All RSS feeds (fast, no Playwright needed)
+    for feed_url, source_name in RSS_FEEDS:
+        try:
+            articles = await scrape_rss(feed_url, source_name)
+            count = save_articles(articles, db)
+            logger.info(f"{source_name} RSS ({feed_url}): {count} new articles")
+        except Exception as e:
+            logger.error(f"{source_name} RSS scraper failed ({feed_url}): {e}")
 
-    # Playwright sources
+    # Playwright sources (JS-rendered pages without RSS)
     playwright_sources = [
-        ("https://openai.com/news", parse_openai_articles, "OpenAI"),
-        ("https://deepmind.google/research/publications", parse_deepmind_articles, "Google DeepMind"),
+        ("https://deepmind.google/research/publications", parse_deepmind_articles, "Google DeepMind Publications"),
         ("https://mistral.ai/news", parse_mistral_articles, "Mistral"),
     ]
     for url, parser, name in playwright_sources:
