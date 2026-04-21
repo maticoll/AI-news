@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import Session
 
@@ -28,5 +29,6 @@ def setup_scheduler(pipeline_fn, session_factory) -> AsyncIOScheduler:
         hours=2,
         max_instances=1,
         id="scrape_and_summarize",
+        next_run_time=datetime.now(timezone.utc),  # run immediately on startup
     )
     return scheduler

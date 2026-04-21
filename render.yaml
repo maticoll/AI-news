@@ -14,7 +14,7 @@ services:
       - key: NEWSLETTER_SENDERS
         sync: false
       - key: DATABASE_URL
-        value: sqlite:///./ainews.db
+        sync: false          # Set this to your Render PostgreSQL Internal Database URL
       - key: CATEGORIES_PATH
         value: ./categories.json
       - key: GMAIL_TOKEN_JSON

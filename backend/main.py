@@ -24,7 +24,19 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 REFRESH_TOKEN = os.getenv("REFRESH_SECRET_TOKEN", "")
-SOURCES = ["Anthropic", "OpenAI", "Google DeepMind", "Mistral", "Newsletter"]
+SOURCES = [
+    "Anthropic",
+    "OpenAI",
+    "Google DeepMind",
+    "Google Research",
+    "Mistral",
+    "TechCrunch",
+    "VentureBeat",
+    "MIT Technology Review",
+    "The Batch",
+    "arXiv",
+    "Newsletter",
+]
 
 limiter = Limiter(key_func=get_remote_address)
 

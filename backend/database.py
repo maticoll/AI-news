@@ -9,7 +9,12 @@ class Base(DeclarativeBase):
 
 def get_engine(url: str | None = None):
     database_url = url or os.getenv("DATABASE_URL", "sqlite:///./ainews.db")
-    return create_engine(database_url, connect_args={"check_same_thread": False})
+    # Render provides postgres:// URLs; SQLAlchemy 1.4+ requires postgresql://
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    # check_same_thread is SQLite-only
+    connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+    return create_engine(database_url, connect_args=connect_args)
 
 
 def init_db(engine=None):
