@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 # All RSS feeds: (url, source_name)
 RSS_FEEDS = [
-    ("https://www.anthropic.com/news.rss",                                                                    "Anthropic"),
     ("https://www.anthropic.com/rss.xml",                                                                     "Anthropic"),
     ("https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_claude.xml",                      "Anthropic"),
     ("https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_changelog_claude_code.xml", "Anthropic"),

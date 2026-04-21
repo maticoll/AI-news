@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -44,8 +45,11 @@ limiter = Limiter(key_func=get_remote_address)
 async def run_pipeline(db: Session) -> None:
     """Full scrape + summarize pipeline. Called by scheduler and /api/refresh."""
     await scrape_all(db)
-    read_newsletters(db)
-    summarize_pending(db)
+    # read_newsletters and summarize_pending are blocking — run in thread pool
+    # so they don't freeze the FastAPI event loop while processing
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, read_newsletters, db)
+    await loop.run_in_executor(None, summarize_pending, db)
 
 
 @asynccontextmanager
