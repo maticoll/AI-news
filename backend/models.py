@@ -23,3 +23,4 @@ class Article(Base):
     )
     is_processed = Column(Boolean, nullable=False, default=False)
     retry_count = Column(Integer, nullable=False, default=0)
+    importance = Column(Integer, nullable=False, default=2)  # 1=baja, 2=media, 3=alta

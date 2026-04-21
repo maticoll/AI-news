@@ -24,10 +24,11 @@ def call_claude(
     title: str,
     excerpt: str,
     categories: list[dict],
-) -> tuple[str, str]:
+) -> tuple[str, str, int]:
     """
-    Single OpenAI call → (summary_es, category_id).
-    Falls back to 'otros' if returned category_id is not in categories list.
+    Single OpenAI call → (summary_es, category_id, importance).
+    importance: 3=alta (nuevo modelo, lanzamiento mayor), 2=media, 1=baja (changelog menor).
+    Falls back to 'otros' / 2 if values are missing or invalid.
     Raises on API error.
     """
     valid_ids = {c["id"] for c in categories}
@@ -38,9 +39,14 @@ def call_claude(
         f"Título: {title}\n"
         f"Extracto: {excerpt}\n\n"
         f"Categorías disponibles: {categories_text}\n\n"
+        f"Reglas de importancia:\n"
+        f"  3 = ALTA: nuevo modelo de IA, lanzamiento mayor de producto, adquisición, hito histórico\n"
+        f"  2 = MEDIA: nueva feature, paper relevante, partnership, actualización importante\n"
+        f"  1 = BAJA: changelog menor, opinión, noticia general, update rutinario\n\n"
         f"Responde con:\n"
         f'{{"summary": "<resumen de 2 oraciones en español>", '
-        f'"category_id": "<id de la categoría más apropiada>"}}'
+        f'"category_id": "<id de la categoría más apropiada>", '
+        f'"importance": <1, 2 o 3>}}'
     )
 
     response = client.chat.completions.create(
@@ -62,8 +68,11 @@ def call_claude(
     category_id = data.get("category_id", "otros")
     if category_id not in valid_ids:
         category_id = "otros"
+    importance = int(data.get("importance", 2))
+    if importance not in (1, 2, 3):
+        importance = 2
 
-    return summary, category_id
+    return summary, category_id, importance
 
 
 def summarize_pending(
@@ -87,7 +96,7 @@ def summarize_pending(
 
     for article in pending:
         try:
-            summary, category_id = call_claude(
+            summary, category_id, importance = call_claude(
                 client=client,
                 title=article.title,
                 excerpt=article.excerpt or "",
@@ -95,6 +104,7 @@ def summarize_pending(
             )
             article.ai_summary = summary
             article.category_id = category_id
+            article.importance = importance
             article.is_processed = True
             db.commit()
         except Exception as e:

@@ -103,6 +103,13 @@ function getCategoryName(id) {
   return cat ? cat.name : id;
 }
 
+// ── Importance badge ──────────────────────────────────────────────────────────
+const IMPORTANCE_LABEL = { 3: '🔴 Alta', 2: '🟡 Media', 1: '⚪ Baja' };
+function importanceBadge(importance) {
+  const level = importance || 2;
+  return `<span class="badge badge-importance-${level}">${IMPORTANCE_LABEL[level] || '🟡 Media'}</span>`;
+}
+
 // ── Article card (shared renderer) ───────────────────────────────────────────
 function renderCard(article) {
   const isEmail = article.source_type === 'email';
@@ -115,7 +122,10 @@ function renderCard(article) {
     <div class="card">
       <div class="card-header">
         <span class="badge ${isEmail ? 'badge-email' : 'badge-source'}">${escapeHtml(article.source)}</span>
-        <span class="card-time">${relativeTime(article.published_at)}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${importanceBadge(article.importance)}
+          <span class="card-time">${relativeTime(article.published_at)}</span>
+        </div>
       </div>
       <div class="card-title">${escapeHtml(article.title)}</div>
       <div class="card-summary ${summaryClass}">
@@ -126,6 +136,38 @@ function renderCard(article) {
         ${url !== '#' ? `<a class="read-link" href="${url}" target="_blank" rel="noopener noreferrer">Leer más →</a>` : ''}
       </div>
     </div>`;
+}
+
+// ── Countdown timer ───────────────────────────────────────────────────────────
+let _nextRunTime = null;
+let _countdownInterval = null;
+
+function formatCountdown(ms) {
+  if (ms <= 0) return '00:00:00';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function tickCountdown() {
+  const el = document.getElementById('countdown-timer');
+  if (!el || !_nextRunTime) return;
+  const ms = _nextRunTime - Date.now();
+  el.textContent = ms > 0 ? formatCountdown(ms) : 'Actualizando...';
+}
+
+async function initCountdown() {
+  try {
+    const res = await fetch('/api/next-run');
+    const data = await res.json();
+    if (data.next_run) {
+      _nextRunTime = new Date(data.next_run).getTime();
+      tickCountdown();
+      if (_countdownInterval) clearInterval(_countdownInterval);
+      _countdownInterval = setInterval(tickCountdown, 1000);
+    }
+  } catch { /* countdown is cosmetic */ }
 }
 
 // ── Chip builder ──────────────────────────────────────────────────────────────
@@ -782,6 +824,9 @@ async function init() {
   initTheme();
   await loadSharedData();
   navigateTo('home');
+  initCountdown();
+  // Refresh countdown every 10 min to stay in sync with server
+  setInterval(initCountdown, 600000);
 }
 
 init();

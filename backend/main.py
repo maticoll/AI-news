@@ -56,11 +56,24 @@ async def run_pipeline(db: Session) -> None:
 async def lifespan(app: FastAPI):
     engine = get_engine()
     init_db(engine)
+
+    # Safe migration: add importance column if it doesn't exist yet
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        try:
+            conn.execute(text(
+                "ALTER TABLE articles ADD COLUMN IF NOT EXISTS importance INTEGER DEFAULT 2"
+            ))
+            conn.commit()
+        except Exception:
+            pass  # column already exists or not PostgreSQL
+
     session_factory = get_session_factory(engine)
     app.state.session_factory = session_factory
 
     scheduler = setup_scheduler(run_pipeline, session_factory)
     scheduler.start()
+    app.state.scheduler = scheduler
     logger.info("Scheduler started")
 
     yield
@@ -142,6 +155,7 @@ def get_articles(
             "ai_summary": a.ai_summary or (a.excerpt if a.source_type == "email" else None),
             "category_id": a.category_id,
             "is_processed": a.is_processed,
+            "importance": a.importance if a.importance is not None else 2,
         }
         for a in articles
     ]
@@ -210,6 +224,17 @@ def get_stats(request: Request, db: Session = Depends(get_db_from_state)):
         "by_source": [{"name": k, "count": v} for k, v in source_rows],
         "articles_per_day": daily_counts,
     }
+
+
+@app.get("/api/next-run")
+def next_run(request: Request):
+    try:
+        job = request.app.state.scheduler.get_job("scrape_and_summarize")
+        if job and job.next_run_time:
+            return {"next_run": job.next_run_time.isoformat()}
+    except Exception:
+        pass
+    return {"next_run": None}
 
 
 @app.get("/api/sources")
