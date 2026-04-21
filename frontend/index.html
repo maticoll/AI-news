@@ -3,61 +3,251 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI News Hub</title>
+  <title>AI News Hub 2.0</title>
   <link rel="stylesheet" href="/static/themes.css" />
 </head>
 <body>
-  <!-- Nav -->
-  <nav>
-    <div class="logo">
-      <div class="logo-dot"></div>
-      <span class="logo-text">AI NEWS HUB</span>
-    </div>
-    <div class="theme-switcher">
-      <span class="theme-label">Tema:</span>
-      <button class="theme-btn active" data-theme="light" title="Clean Light" onclick="setTheme('light')"></button>
-      <button class="theme-btn" data-theme="dark" title="Dark Tech" onclick="setTheme('dark')"></button>
-      <button class="theme-btn" data-theme="gradient" title="Gradient Modern" onclick="setTheme('gradient')"></button>
-    </div>
-  </nav>
+<div class="app-layout">
 
-  <!-- Hero + search -->
-  <div class="hero">
-    <h1>Noticias de IA al instante</h1>
-    <p>Actualizadas cada 2 horas · Resúmenes con Claude AI</p>
-    <div class="search-wrap">
-      <span>🔍</span>
-      <input id="search-input" type="text" placeholder="Buscar noticias, modelos, features..." autocomplete="off" />
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-dot"></div>
+        <div>
+          <div class="logo-text">AI NEWS HUB</div>
+          <div class="logo-version">versión 2.0</div>
+        </div>
+      </div>
+      <button class="sidebar-close" id="sidebar-close" onclick="toggleSidebar()" aria-label="Cerrar menú">✕</button>
     </div>
-  </div>
 
-  <!-- Filters -->
-  <div class="filter-section">
-    <div class="filter-row">
-      <span class="filter-row-label">Fuente</span>
-      <div id="source-filters"></div>
-    </div>
-    <div class="filter-row">
-      <span class="filter-row-label">Tema</span>
-      <div id="category-filters"></div>
-    </div>
-  </div>
-
-  <!-- Cards -->
-  <main class="main">
-    <div id="error-msg" class="error-msg" style="display:none"></div>
-    <div id="cards-grid" class="cards-grid"></div>
-    <div class="load-more-wrap">
-      <button id="load-more-btn" class="load-more-btn" onclick="loadMore()" style="display:none">
-        Cargar más
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-view="home" onclick="navigateTo('home')">
+        <span class="nav-icon">🏠</span><span class="nav-label">Inicio</span>
       </button>
+      <button class="nav-item" data-view="dashboard" onclick="navigateTo('dashboard')">
+        <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+      </button>
+      <button class="nav-item" data-view="digest" onclick="navigateTo('digest')">
+        <span class="nav-icon">🗞️</span><span class="nav-label">Resumen del Día</span>
+      </button>
+      <button class="nav-item" data-view="search" onclick="navigateTo('search')">
+        <span class="nav-icon">🔍</span><span class="nav-label">Búsqueda Avanzada</span>
+      </button>
+      <button class="nav-item" data-view="myfeed" onclick="navigateTo('myfeed')">
+        <span class="nav-icon">⭐</span><span class="nav-label">Mi Feed</span>
+      </button>
+      <button class="nav-item" data-view="compare" onclick="navigateTo('compare')">
+        <span class="nav-icon">⚖️</span><span class="nav-label">Comparar Fuentes</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="theme-switcher-sidebar">
+        <span class="theme-label-small">Tema</span>
+        <div class="theme-buttons">
+          <button class="theme-btn active" data-theme="light"  title="Clean Light"     onclick="setTheme('light')"></button>
+          <button class="theme-btn"        data-theme="dark"   title="Dark Tech"       onclick="setTheme('dark')"></button>
+          <button class="theme-btn"        data-theme="gradient" title="Gradient Modern" onclick="setTheme('gradient')"></button>
+        </div>
+      </div>
+      <div class="sidebar-footer-info">Actualiza cada 2 horas</div>
     </div>
-  </main>
+  </aside>
 
-  <footer>
-    <span id="footer-info">Cargando...</span> · Powered by Claude AI
-  </footer>
+  <!-- Overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-  <script src="/static/app.js?v=2"></script>
+  <!-- ── Main area ───────────────────────────────────────────────────────── -->
+  <div class="main-area">
+
+    <!-- Mobile header -->
+    <header class="mobile-header">
+      <button class="hamburger" onclick="toggleSidebar()" aria-label="Abrir menú">☰</button>
+      <span class="mobile-title">AI NEWS HUB <span class="mobile-v">2.0</span></span>
+    </header>
+
+    <!-- ── INICIO ────────────────────────────────────────────────────────── -->
+    <div id="view-home" class="view active">
+      <div class="view-header">
+        <h1>Noticias de IA</h1>
+        <p>Actualizadas cada 2 horas · Resúmenes generados con IA</p>
+      </div>
+      <div class="view-search-bar">
+        <span class="search-icon-inner">🔍</span>
+        <input id="home-search" type="text" placeholder="Buscar noticias, modelos, features..." autocomplete="off" />
+      </div>
+      <div class="filter-section">
+        <div class="filter-row">
+          <span class="filter-row-label">Fuente</span>
+          <div id="home-source-filters" class="chips-wrap"></div>
+        </div>
+        <div class="filter-row mt-8">
+          <span class="filter-row-label">Tema</span>
+          <div id="home-category-filters" class="chips-wrap"></div>
+        </div>
+      </div>
+      <div class="view-body">
+        <div id="home-error" class="error-msg" style="display:none"></div>
+        <div id="home-grid" class="cards-grid"></div>
+        <div class="load-more-wrap">
+          <button id="home-load-more" class="btn-primary" onclick="loadMore()" style="display:none">Cargar más</button>
+        </div>
+        <div id="home-footer" class="list-footer"></div>
+      </div>
+    </div>
+
+    <!-- ── DASHBOARD ─────────────────────────────────────────────────────── -->
+    <div id="view-dashboard" class="view">
+      <div class="view-header">
+        <h1>Dashboard</h1>
+        <p>Métricas y tendencias de noticias de IA</p>
+      </div>
+      <div class="view-body">
+        <div id="dashboard-stats" class="stats-grid"></div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Artículos por día <span class="chart-subtitle">(últimos 7 días)</span></div>
+            <div class="chart-wrap"><canvas id="chart-daily"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Por categoría</div>
+            <div class="chart-wrap chart-wrap-doughnut"><canvas id="chart-categories"></canvas></div>
+          </div>
+          <div class="chart-card chart-wide">
+            <div class="chart-title">Top fuentes</div>
+            <div class="chart-wrap chart-wrap-bar"><canvas id="chart-sources"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RESUMEN DEL DÍA ────────────────────────────────────────────────── -->
+    <div id="view-digest" class="view">
+      <div class="view-header">
+        <h1>Resumen del Día</h1>
+        <p id="digest-date-label">Cargando...</p>
+      </div>
+      <div class="view-body">
+        <div id="digest-content"></div>
+      </div>
+    </div>
+
+    <!-- ── BÚSQUEDA AVANZADA ──────────────────────────────────────────────── -->
+    <div id="view-search" class="view">
+      <div class="view-header">
+        <h1>Búsqueda Avanzada</h1>
+        <p>Filtrá por fecha, fuente, categoría y orden</p>
+      </div>
+      <div class="view-body">
+        <div class="search-panel">
+          <div class="view-search-bar">
+            <span class="search-icon-inner">🔍</span>
+            <input id="adv-search-input" type="text" placeholder="Buscar artículos..." autocomplete="off"
+              onkeydown="if(event.key==='Enter') performSearch()" />
+          </div>
+          <div class="adv-filters-row">
+            <div class="adv-filter-item">
+              <label class="adv-label">Desde</label>
+              <input type="date" id="adv-date-from" class="date-input" />
+            </div>
+            <div class="adv-filter-item">
+              <label class="adv-label">Hasta</label>
+              <input type="date" id="adv-date-to" class="date-input" />
+            </div>
+            <div class="adv-filter-item">
+              <label class="adv-label">Ordenar</label>
+              <select id="adv-sort" class="select-input">
+                <option value="desc">Más reciente</option>
+                <option value="asc">Más antiguo</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-row mt-8">
+            <span class="filter-row-label">Fuente</span>
+            <div id="adv-source-filters" class="chips-wrap"></div>
+          </div>
+          <div class="filter-row mt-8">
+            <span class="filter-row-label">Categoría</span>
+            <div id="adv-category-filters" class="chips-wrap"></div>
+          </div>
+          <button class="btn-primary search-submit-btn" onclick="performSearch()">🔍 Buscar</button>
+        </div>
+        <div id="search-results-info" class="results-info" style="display:none"></div>
+        <div id="search-grid" class="cards-grid"></div>
+        <div class="load-more-wrap">
+          <button id="search-load-more" class="btn-primary" onclick="loadMoreSearch()" style="display:none">Cargar más</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MI FEED ────────────────────────────────────────────────────────── -->
+    <div id="view-myfeed" class="view">
+      <div class="view-header">
+        <h1>Mi Feed</h1>
+        <p>Tu selección personalizada de fuentes y temas</p>
+      </div>
+      <div class="view-body">
+        <!-- Setup panel (shown when no prefs saved) -->
+        <div id="myfeed-setup">
+          <div class="setup-card">
+            <div class="setup-icon">⭐</div>
+            <h3>Personalizá tu feed</h3>
+            <p>Elegí las fuentes y categorías que más te interesan para ver solo lo que te importa.</p>
+            <div class="setup-section">
+              <label class="setup-label">Fuentes <span class="setup-hint">(elegí una o más)</span></label>
+              <div id="myfeed-source-chips" class="chips-wrap chips-multi"></div>
+            </div>
+            <div class="setup-section">
+              <label class="setup-label">Categorías <span class="setup-hint">(elegí una o más)</span></label>
+              <div id="myfeed-category-chips" class="chips-wrap chips-multi"></div>
+            </div>
+            <button class="btn-primary setup-save-btn" onclick="saveMyFeedPrefs()">Guardar y ver mi feed →</button>
+          </div>
+        </div>
+        <!-- Feed articles (shown when prefs are saved) -->
+        <div id="myfeed-articles" style="display:none">
+          <div class="myfeed-top-bar">
+            <div id="myfeed-prefs-summary" class="myfeed-prefs-summary"></div>
+            <button class="btn-secondary" onclick="editMyFeedPrefs()">✏️ Editar preferencias</button>
+          </div>
+          <div id="myfeed-grid" class="cards-grid"></div>
+          <div class="load-more-wrap">
+            <button id="myfeed-load-more" class="btn-primary" onclick="loadMoreMyFeed()" style="display:none">Cargar más</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COMPARAR FUENTES ───────────────────────────────────────────────── -->
+    <div id="view-compare" class="view">
+      <div class="view-header">
+        <h1>Comparar Fuentes</h1>
+        <p>Mirá qué dicen distintos medios sobre el mismo tema</p>
+      </div>
+      <div class="view-body">
+        <div class="compare-search-wrap">
+          <span class="search-icon-inner">🔍</span>
+          <input id="compare-input" type="text" placeholder="Ej: GPT-5, Gemini, Claude 4, multimodal..." autocomplete="off"
+            onkeydown="if(event.key==='Enter') performCompare()" />
+          <button class="btn-primary compare-btn" onclick="performCompare()">Comparar</button>
+        </div>
+        <div id="compare-results"></div>
+      </div>
+    </div>
+
+  </div><!-- /main-area -->
+</div><!-- /app-layout -->
+
+<!-- Toast -->
+<div id="toast" class="toast">
+  <span class="toast-icon">✨</span>
+  <span id="toast-msg"></span>
+  <button class="toast-close" onclick="dismissToast()" aria-label="Cerrar">×</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="/static/app.js?v=3"></script>
 </body>
 </html>
