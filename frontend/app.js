@@ -66,7 +66,7 @@ function closeSidebar() {
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-let currentView = 'home';
+let currentView = null;
 const VIEW_INIT = {};  // view initializers registry
 
 function navigateTo(view) {
@@ -163,11 +163,17 @@ async function initCountdown() {
     const data = await res.json();
     if (data.next_run) {
       _nextRunTime = new Date(data.next_run).getTime();
-      tickCountdown();
-      if (_countdownInterval) clearInterval(_countdownInterval);
-      _countdownInterval = setInterval(tickCountdown, 1000);
+    } else {
+      // Fallback: assume next run is 2 hours from now
+      _nextRunTime = Date.now() + 2 * 3600 * 1000;
     }
-  } catch { /* countdown is cosmetic */ }
+  } catch {
+    // Fallback if fetch fails
+    _nextRunTime = Date.now() + 2 * 3600 * 1000;
+  }
+  tickCountdown();
+  if (_countdownInterval) clearInterval(_countdownInterval);
+  _countdownInterval = setInterval(tickCountdown, 1000);
 }
 
 // ── Chip builder ──────────────────────────────────────────────────────────────
@@ -205,8 +211,14 @@ function buildChips(containerId, items, onSelect, { multi = false, selected = nu
 // ════════════════════════════════════════════════════════════════════════════
 // ── INICIO VIEW ──────────────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════════
+const IMPORTANCE_OPTIONS = [
+  { id: '3', name: '🔴 Alta' },
+  { id: '2', name: '🟡 Media' },
+  { id: '1', name: '⚪ Baja' },
+];
+
 const homeState = {
-  source: null, category: null, q: '',
+  source: null, category: null, importance: null, q: '',
   offset: 0, limit: 20, loading: false, totalLoaded: 0,
   initialized: false,
 };
@@ -215,8 +227,9 @@ function initHomeView() {
   if (homeState.initialized) return;
   homeState.initialized = true;
 
-  buildChips('home-source-filters',   sourcesCache,    v => { homeState.source   = v; homeState.offset = 0; homeState.totalLoaded = 0; fetchHomeArticles(); });
-  buildChips('home-category-filters', categoriesCache, v => { homeState.category = v; homeState.offset = 0; homeState.totalLoaded = 0; fetchHomeArticles(); });
+  buildChips('home-source-filters',     sourcesCache,      v => { homeState.source     = v;           homeState.offset = 0; homeState.totalLoaded = 0; fetchHomeArticles(); });
+  buildChips('home-category-filters',   categoriesCache,   v => { homeState.category   = v;           homeState.offset = 0; homeState.totalLoaded = 0; fetchHomeArticles(); });
+  buildChips('home-importance-filters', IMPORTANCE_OPTIONS, v => { homeState.importance = v || null;   homeState.offset = 0; homeState.totalLoaded = 0; fetchHomeArticles(); });
 
   const input = document.getElementById('home-search');
   let searchTimer;
@@ -241,9 +254,10 @@ async function fetchHomeArticles(append = false) {
   if (!append) grid.innerHTML = renderSkeletons(6);
 
   const params = new URLSearchParams({ limit: homeState.limit, offset: homeState.offset });
-  if (homeState.source)   params.set('source',   homeState.source);
-  if (homeState.category) params.set('category', homeState.category);
-  if (homeState.q)        params.set('q',        homeState.q);
+  if (homeState.source)     params.set('source',     homeState.source);
+  if (homeState.category)   params.set('category',   homeState.category);
+  if (homeState.importance) params.set('importance', homeState.importance);
+  if (homeState.q)          params.set('q',          homeState.q);
 
   try {
     const res      = await fetch(`/api/articles?${params}`);
@@ -301,9 +315,9 @@ async function initDashboardView() {
     if (!res.ok) throw new Error();
     const stats = await res.json();
     renderStatCards(stats);
-    renderDailyChart(stats.articles_per_day);
-    renderCategoryChart(stats.by_category);
-    renderSourcesChart(stats.by_source);
+    try { renderDailyChart(stats.articles_per_day); } catch (e) { console.error('daily chart:', e); }
+    try { renderCategoryChart(stats.by_category); }  catch (e) { console.error('cat chart:', e); }
+    try { renderSourcesChart(stats.by_source); }     catch (e) { console.error('sources chart:', e); }
   } catch (e) {
     document.getElementById('dashboard-stats').innerHTML =
       `<div class="error-msg">No se pudieron cargar las estadísticas.</div>`;
@@ -338,8 +352,6 @@ function renderDailyChart(data) {
 
   // Gradient fill
   const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-  gradient.addColorStop(0, accent.replace(')', ', 0.3)').replace('rgb', 'rgba').replace('#', 'rgba(').replace('rgba(', 'rgba(') + (accent.startsWith('#') ? '' : ''));
-  // Simpler gradient using hex
   gradient.addColorStop(0, accent + '44');
   gradient.addColorStop(1, accent + '00');
 

@@ -49,13 +49,22 @@ The full pipeline is also exposed at `POST /api/refresh` (requires `X-Refresh-To
 
 | Module | Responsibility |
 |---|---|
-| `main.py` | FastAPI app, lifespan, API routes, static file serving |
+| `main.py` | FastAPI app, lifespan, API routes, static file serving, rate limiting (slowapi) |
 | `database.py` | SQLAlchemy engine/session factory, `get_db` FastAPI dependency |
 | `models.py` | `Article` ORM model (single table: `articles`) |
-| `scraper.py` | Web scraping: Anthropic (RSS/httpx), OpenAI/DeepMind/Mistral (Playwright) |
+| `scraper.py` | Web scraping: Anthropic (RSS/httpx), OpenAI/DeepMind/Google Research/Mistral/TechCrunch/VentureBeat/MIT Tech Review/The Batch/arXiv (Playwright/RSS) |
 | `gmail_reader.py` | Gmail API integration: reads unread newsletters from configured senders |
-| `summarizer.py` | Calls GPT-4o-mini to generate Spanish summaries and assign categories |
+| `summarizer.py` | Calls GPT-4o-mini to generate Spanish summaries, assign categories, and set importance |
 | `scheduler.py` | APScheduler setup — runs pipeline every 2 hours |
+
+### Article model fields
+- `importance` (Integer): 1=baja, 2=media (default), 3=alta — assigned by summarizer
+- `source_type`: `"web"` or `"email"`
+- `is_processed` / `retry_count`: summarizer state (max retries: 5)
+
+### API rate limits (slowapi)
+- `GET /api/articles`, `/api/stats`, `/api/sources`, `/api/categories`: 60/minute
+- `POST /api/refresh`: 5/minute
 
 ### Scraper design
 - **Pure parser functions** (`parse_rss_feed`, `parse_openai_articles`, etc.) do HTML/XML parsing with no I/O — this makes them independently testable with fixture files.
@@ -66,10 +75,25 @@ The full pipeline is also exposed at `POST /api/refresh` (requires `X-Refresh-To
 Web articles use the canonical URL as the unique key. Email/newsletter articles use the `Message-ID` header (or a SHA-256 hash of sender+subject+date as fallback).
 
 ### Summarizer
-Uses `OpenAI` client (not Anthropic — the function is named `call_claude` but calls GPT-4o-mini). Returns a 2-sentence Spanish summary and assigns one of the category IDs from `categories.json`. Articles that fail are retried up to `MAX_RETRIES = 5` times via `retry_count`.
+Uses `OpenAI` client (not Anthropic — the function is named `call_claude` but calls GPT-4o-mini). Returns a 2-sentence Spanish summary, assigns one of the category IDs from `categories.json`, and sets `importance` (1–3). Articles that fail are retried up to `MAX_RETRIES = 5` times via `retry_count`.
 
 ### Frontend (`frontend/`)
-Vanilla HTML + JS + CSS — no build step. Served directly by FastAPI as static files. Three CSS themes defined in `themes.css`. The root `/` serves `frontend/index.html`.
+Vanilla HTML + JS + CSS — no build step. Served directly by FastAPI as static files. Three CSS themes in `themes.css`. Charts use Chart.js (CDN). The root `/` serves `frontend/index.html`.
+
+Six views registered in `app.js`:
+| View | Description |
+|---|---|
+| `home` | Feed principal con filtros por fuente/categoría, búsqueda y paginación infinita |
+| `dashboard` | Estadísticas con gráficos Chart.js (línea diaria, doughnut categorías, barras fuentes) |
+| `digest` | Resumen del día agrupado por categoría |
+| `search` | Búsqueda avanzada con filtros de fecha, fuente, categoría y orden |
+| `myfeed` | Feed personalizado — preferencias guardadas en `localStorage` |
+| `compare` | Comparar fuentes: muestra resultados de un término agrupados por fuente |
+
+Frontend features:
+- **Importance badge**: `🔴 Alta / 🟡 Media / ⚪ Baja` en cada card
+- **Countdown**: timer hasta el próximo scraping vía `GET /api/next-run`
+- **Auto-polling**: cuando hay artículos pendientes, refresca cada 30s y muestra toast al completarse
 
 ### Environment variables
 See `.env.example` for all required vars. Key ones:

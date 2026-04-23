@@ -111,6 +111,7 @@ def get_articles(
     q: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
+    importance: int | None = None,
     sort: str = Query(default="desc"),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
@@ -121,6 +122,8 @@ def get_articles(
         query = query.filter(Article.source == source)
     if category:
         query = query.filter(Article.category_id == category)
+    if importance is not None:
+        query = query.filter(Article.importance == importance)
     if q:
         query = query.filter(Article.title.ilike(f"%{q}%"))
     if date_from:
@@ -232,8 +235,9 @@ def next_run(request: Request):
         job = request.app.state.scheduler.get_job("scrape_and_summarize")
         if job and job.next_run_time:
             return {"next_run": job.next_run_time.isoformat()}
-    except Exception:
-        pass
+        logger.warning("next-run: job not found or no next_run_time")
+    except Exception as e:
+        logger.error(f"next-run endpoint error: {e}")
     return {"next_run": None}
 
 
